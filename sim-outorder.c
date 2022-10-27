@@ -128,6 +128,10 @@ static int comb_nelt = 1;
 static int comb_config[1] =
   { /* meta_table_size */1024 };
 
+/* cascade predictor config*/
+static int cascade_nelt = 0;
+static int cascade_config[0] = {};
+
 /* return address stack (RAS) size */
 static int ras_size = 8;
 
@@ -673,6 +677,12 @@ sim_reg_options(struct opt_odb_t *odb)
 		   /* default */comb_config,
 		   /* print */TRUE, /* format */NULL, /* !accrue */FALSE);
 
+  opt_reg_int_list(odb, "-bpred:cascade",
+       "cascade predictor config (<null>)",
+       cascade_config, cascade_nelt, &cascade_nelt,
+       /* default */cascade_config, 
+       /* print */TRUE, /* format */NULL, /* !accrue */FALSE);
+
   opt_reg_int(odb, "-bpred:ras",
               "return address stack size (0 for no return stack)",
               &ras_size, /* default */ras_size,
@@ -969,6 +979,29 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
 			  /* l1 size */twolev_config[0],
 			  /* l2 size */twolev_config[1],
 			  /* meta table size */comb_config[0],
+			  /* history reg size */twolev_config[2],
+			  /* history xor address */twolev_config[3],
+			  /* btb sets */btb_config[0],
+			  /* btb assoc */btb_config[1],
+			  /* ret-addr stack size */ras_size);
+    }
+  else if (!mystrimp(pred_type, "cascade"))
+    {
+        /* cascade predictor, bpred_create() checks args */
+        if (twolev_nelt != 4)
+    fatal("bad 2-level pred config (<l1size> <l2size> <hist_size> <xor>)");
+        if (bimod_nelt != 1)
+    fatal("bad bimod predictor config (<table_size>)");
+        if (cascade_nelt != 0)
+    fatal("bad cascade predictor config (<null>)");
+        if (btb_nelt != 2)
+    fatal("bad btb config (<num_sets> <associativity>)");
+        
+        pred = bpred_create(BPredCascade,
+			  /* bimod table size */bimod_config[0],
+			  /* l1 size */twolev_config[0],
+			  /* l2 size */twolev_config[1],
+			  /* meta table size */0,
 			  /* history reg size */twolev_config[2],
 			  /* history xor address */twolev_config[3],
 			  /* btb sets */btb_config[0],

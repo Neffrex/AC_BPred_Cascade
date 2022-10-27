@@ -104,6 +104,7 @@ enum bpred_class {
   BPred2bit,			/* 2-bit saturating cntr pred (dir mapped) */
   BPredTaken,			/* static predict taken */
   BPredNotTaken,		/* static predict not taken */
+  BPredCascade,   /* New Predictor with Gshare and Bimod in hybrid mode */
   BPred_NUM
 };
 
