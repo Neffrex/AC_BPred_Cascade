@@ -251,7 +251,7 @@ bpred_dir_create (
     /* initialize counters to weakly this-or-that */
     for (cnt = 0; cnt < l1size; cnt++)
       {
-	pred_dir->config.bimod.table[cnt] = 4;
+	pred_dir->config.bimod.table[cnt] = 3;
         }
 
     break;
@@ -505,50 +505,71 @@ bpred_after_priming(struct bpred_t *bpred)
     /* was: ((baddr >> 16) ^ baddr) & (pred->dirpred.bimod.size-1) */
 
 /* predicts a branch direction */
-char *						/* pointer to counter */
-bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
-		 md_addr_t baddr)		/* branch address */
-{
-  unsigned char *p = NULL;
+char * /* pointer to counter */
+  bpred_dir_lookup(struct bpred_dir_t * pred_dir, /* branch dir predictor inst */
+    md_addr_t baddr) /* branch address */ {
+    unsigned char * p = NULL;
 
-  /* Except for jumps, get a pointer to direction-prediction bits */
-  switch (pred_dir->class) {
-    case BPred2Level:
-      {
-	int l1index, l2index;
+    /* Except for jumps, get a pointer to direction-prediction bits */
+    switch (pred_dir -> class) {
+    case BPred2Level: {
+      int l1index, l2index;
 
-        /* traverse 2-level tables */
-        l1index = (baddr >> MD_BR_SHIFT) & (pred_dir->config.two.l1size - 1);
-        l2index = pred_dir->config.two.shiftregs[l1index];
-        if (pred_dir->config.two.xor)
-	  {
-#if 1
-	    /* this L2 index computation is more "compatible" to McFarling's
-	       verison of it, i.e., if the PC xor address component is only
-	       part of the index, take the lower order address bits for the
-	       other part of the index, rather than the higher order ones */
-	    l2index = (((l2index ^ (baddr >> MD_BR_SHIFT))
-			& ((1 << pred_dir->config.two.shift_width) - 1))
-		       | ((baddr >> MD_BR_SHIFT)
-			  << pred_dir->config.two.shift_width));
-#else
-	    l2index = l2index ^ (baddr >> MD_BR_SHIFT);
-#endif
-	  }
-	else
-	  {
-	    l2index =
-	      l2index
-		| ((baddr >> MD_BR_SHIFT) << pred_dir->config.two.shift_width);
-	  }
-        l2index = l2index & (pred_dir->config.two.l2size - 1);
-
-        /* get a pointer to prediction state information */
-        p = &pred_dir->config.two.l2table[l2index];
+      /* traverse 2-level tables */
+      l1index = (baddr >> MD_BR_SHIFT) & (pred_dir -> config.two.l1size - 1);
+      l2index = pred_dir -> config.two.shiftregs[l1index];
+      if (pred_dir -> config.two.xor) {
+        #if 1
+        /* this L2 index computation is more "compatible" to McFarling's
+           verison of it, i.e., if the PC xor address component is only
+           part of the index, take the lower order address bits for the
+           other part of the index, rather than the higher order ones */
+        l2index = (((l2index ^ (baddr >> MD_BR_SHIFT)) &
+            ((1 << pred_dir -> config.two.shift_width) - 1)) |
+          ((baddr >> MD_BR_SHIFT) <<
+            pred_dir -> config.two.shift_width));
+        #else
+        l2index = l2index ^ (baddr >> MD_BR_SHIFT);
+        #endif
+      } else {
+        l2index = l2index | ((baddr >> MD_BR_SHIFT) << pred_dir -> config.two.shift_width);
       }
-      break;
+      l2index = l2index & (pred_dir -> config.two.l2size - 1);
+
+      /* get a pointer to prediction state information */
+      p = & pred_dir -> config.two.l2table[l2index];
+    }
+    break;
+    case BPredCascade: {
+      int l1index, l2index;
+
+      /* traverse 2-level tables */
+      l1index = (baddr >> MD_BR_SHIFT) & (pred_dir -> config.two.l1size - 1);
+      l2index = pred_dir -> config.two.shiftregs[l1index];
+      if (pred_dir -> config.two.xor) {
+        #if 1
+        /* this L2 index computation is more "compatible" to McFarling's
+           verison of it, i.e., if the PC xor address component is only
+           part of the index, take the lower order address bits for the
+           other part of the index, rather than the higher order ones */
+        l2index = (((l2index ^ (baddr >> MD_BR_SHIFT)) &
+            ((1 << pred_dir -> config.two.shift_width) - 1)) |
+          ((baddr >> MD_BR_SHIFT) <<
+            pred_dir -> config.two.shift_width));
+        #else
+        l2index = l2index ^ (baddr >> MD_BR_SHIFT);
+        #endif
+      } else {
+        l2index = l2index | ((baddr >> MD_BR_SHIFT) << pred_dir -> config.two.shift_width);
+      }
+      l2index = l2index & (pred_dir -> config.two.l2size - 1);
+
+      /* get a pointer to prediction state information */
+      p = & pred_dir -> config.two.l2table[l2index];
+    }
+    break;
     case BPred2bit:
-      p = &pred_dir->config.bimod.table[BIMOD_HASH(pred_dir, baddr)];
+      p = & pred_dir -> config.bimod.table[BIMOD_HASH(pred_dir, baddr)];
       break;
     case BPredTaken:
     case BPredNotTaken:
@@ -557,8 +578,8 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
       panic("bogus branch direction predictor class");
     }
 
-  return (char *)p;
-}
+    return (char * ) p;
+  }
 
 /* probe a predictor for a next fetch address, the predictor is probed
    with branch address BADDR, the branch target is BTARGET (used for
@@ -602,12 +623,33 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 	  char *bimod, *twolev, *meta;
 	  bimod = bpred_dir_lookup (pred->dirpred.bimod, baddr);
 	  twolev = bpred_dir_lookup (pred->dirpred.twolev, baddr);
-	  meta = bpred_dir_lookup (pred->dirpred.meta, baddr);
-	  dir_update_ptr->pmeta = meta;
-	  dir_update_ptr->dir.meta  = (*meta >= 2);
+    meta = bpred_dir_lookup (pred->dirpred.meta, baddr);
 	  dir_update_ptr->dir.bimod = (*bimod >= 2);
 	  dir_update_ptr->dir.twolev  = (*twolev >= 2);
+    dir_update_ptr->dir.meta = (*meta >= 2);
 	  if (*meta >= 2)
+	    {
+	      dir_update_ptr->pdir1 = twolev;
+	      dir_update_ptr->pdir2 = bimod;
+        dir_update_ptr->pred_used = 1;
+	    }
+	  else
+	    {
+	      dir_update_ptr->pdir1 = bimod;
+	      dir_update_ptr->pdir2 = twolev;
+        dir_update_ptr->pred_used = 0;
+	    }
+	}
+      break;
+    case BPredCascade:
+      if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
+	{
+	  char *bimod, *twolev;
+	  bimod = bpred_dir_lookup (pred->dirpred.bimod, baddr);
+	  twolev = bpred_dir_lookup (pred->dirpred.twolev, baddr);
+	  dir_update_ptr->dir.bimod = (*bimod >= 2);
+	  dir_update_ptr->dir.twolev  = (*twolev >= 2);
+	  if (*twolev != 4)
 	    {
 	      dir_update_ptr->pdir1 = twolev;
 	      dir_update_ptr->pdir2 = bimod;
@@ -794,7 +836,8 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
     }
   else if ((MD_OP_FLAGS(op) & (F_CTRL|F_COND)) == (F_CTRL|F_COND))
     {
-      if (dir_update_ptr->dir.meta)
+      
+      if (dir_update_ptr->pred_used)
 	pred->used_2lev++;
       else
 	pred->used_bimod++;
@@ -844,7 +887,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   /* update L1 table if appropriate */
   /* L1 table is updated unconditionally for combining predictor too */
   if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND) &&
-      (pred->class == BPred2Level || pred->class == BPredComb))
+      (pred->class == BPred2Level || pred->class == BPredComb || pred->class == BPredCascade))
     {
       int l1index, shift_reg;
       
@@ -921,7 +964,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
       else
 	pbtb = &pred->btb.btb_data[index];
     }
-      
+    
   /* 
    * Now 'p' is a possibly null pointer into the direction prediction table, 
    * and 'pbtb' is a possibly null pointer into the BTB (either to a 
