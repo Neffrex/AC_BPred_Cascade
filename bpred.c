@@ -978,6 +978,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 	{
 	  if (*dir_update_ptr->pdir1 < 3)
 	    ++*dir_update_ptr->pdir1;
+
 	}
       else
 	{ /* not taken */
@@ -990,36 +991,16 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   /* second direction predictor */
   if (dir_update_ptr->pdir2)
     {
-      if (taken)
+      if (taken && *dir_update_ptr->pdir1 >=2)
 	{
 	  if (*dir_update_ptr->pdir2 < 3)
 	    ++*dir_update_ptr->pdir2;
+    
 	}
-      else
+      else if (*dir_update_ptr->pdir1 < 2)
 	{ /* not taken */
 	  if (*dir_update_ptr->pdir2 > 0)
 	    --*dir_update_ptr->pdir2;
-	}
-    }
-
-  /* meta predictor */
-  if (dir_update_ptr->pmeta)
-    {
-      if (dir_update_ptr->dir.bimod != dir_update_ptr->dir.twolev)
-	{
-	  /* we only update meta predictor if directions were different */
-	  if (dir_update_ptr->dir.twolev == (unsigned int)taken)
-	    {
-	      /* 2-level predictor was correct */
-	      if (*dir_update_ptr->pmeta < 3)
-		++*dir_update_ptr->pmeta;
-	    }
-	  else
-	    {
-	      /* bimodal predictor was correct */
-	      if (*dir_update_ptr->pmeta > 0)
-		--*dir_update_ptr->pmeta;
-	    }
 	}
     }
 
