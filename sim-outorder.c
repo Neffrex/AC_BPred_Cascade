@@ -985,7 +985,7 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
 			  /* btb assoc */btb_config[1],
 			  /* ret-addr stack size */ras_size);
     }
-  else if (!mystrimp(pred_type, "cascade"))
+  else if (!mystricmp(pred_type, "cascade"))
     {
         /* cascade predictor, bpred_create() checks args */
         if (twolev_nelt != 4)
@@ -996,7 +996,7 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
     fatal("bad cascade predictor config (<null>)");
         if (btb_nelt != 2)
     fatal("bad btb config (<num_sets> <associativity>)");
-        
+       
         pred = bpred_create(BPredCascade,
 			  /* bimod table size */bimod_config[0],
 			  /* l1 size */twolev_config[0],

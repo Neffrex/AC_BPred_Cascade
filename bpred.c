@@ -106,6 +106,8 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
     /* 2-level component */
     pred->dirpred.twolev = 
       bpred_dir_create(BPred2Level, l1size, l2size, shift_width, xor);
+    
+    break;
 
   case BPred2Level:
     pred->dirpred.twolev = 
@@ -129,6 +131,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   /* allocate ret-addr stack */
   switch (class) {
   case BPredComb:
+  case BPredCascade:
   case BPred2Level:
   case BPred2bit:
     {
@@ -196,7 +199,6 @@ bpred_dir_create (
 {
   struct bpred_dir_t *pred_dir;
   unsigned int cnt;
-  int flipflop;
 
   if (!(pred_dir = calloc(1, sizeof(struct bpred_dir_t))))
     fatal("out of virtual memory");
