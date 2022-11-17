@@ -1,0 +1,58 @@
+gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c main.c
+gcc -o sim-fast `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-fast.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
+gcc -o sim-safe `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-safe.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
+gcc -o sim-eio `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-eio.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
+gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c sim-bpred.c
+sim-bpred.c: In function ‘sim_main’:
+sim-bpred.c:495:15: warning: unused variable ‘temp_qword’ [-Wunused-variable]
+  495 |       qword_t temp_qword = 0;  /* " ditto " */
+      |               ^~~~~~~~~~
+sim-bpred.c:493:14: warning: unused variable ‘temp_word’ [-Wunused-variable]
+  493 |       word_t temp_word = 0;  /* " ditto " */
+      |              ^~~~~~~~~
+sim-bpred.c:492:14: warning: unused variable ‘temp_half’ [-Wunused-variable]
+  492 |       half_t temp_half = 0;  /* " ditto " */
+      |              ^~~~~~~~~
+sim-bpred.c:491:14: warning: unused variable ‘temp_byte’ [-Wunused-variable]
+  491 |       byte_t temp_byte = 0;  /* temp variable for spec mem access */
+      |              ^~~~~~~~~
+sim-bpred.c:488:17: warning: variable ‘target_PC’ set but not used [-Wunused-but-set-variable]
+  488 |       md_addr_t target_PC;  /* actual next/target PC address */
+      |                 ^~~~~~~~~
+gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c bpred.c
+gcc -o sim-bpred `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-bpred.o bpred.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
+gcc -o sim-profile `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-profile.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
+gcc -o sim-cache `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-cache.o cache.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
+gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c sim-outorder.c
+sim-outorder.c: In function ‘ruu_dispatch’:
+sim-outorder.c:3760:7: warning: variable ‘br_taken’ set but not used [-Wunused-but-set-variable]
+ 3760 |   int br_taken, br_pred_taken;  /* if br, taken?  predicted taken? */
+      |       ^~~~~~~~
+sim-outorder.c: In function ‘sim_main’:
+sim-outorder.c:4494:17: warning: variable ‘target_PC’ set but not used [-Wunused-but-set-variable]
+ 4494 |       md_addr_t target_PC;  /* actual next/target PC address */
+      |                 ^~~~~~~~~
+In file included from sim-outorder.c:73:
+dlite.h:197:6: warning: ‘addr’ may be used uninitialized in this function [-Wmaybe-uninitialized]
+  197 |    ? __check_break((NPC), (ACCESS), (ADDR), (ICNT), (CYCLE))  \
+      |      ^~~~~~~~~~~~~
+sim-outorder.c:3752:13: note: ‘addr’ was declared here
+ 3752 |   md_addr_t addr;   /* effective address, if load/store */
+      |             ^~~~
+In file included from sim-outorder.c:73:
+dlite.h:197:6: warning: ‘is_write’ may be used uninitialized in this function [-Wmaybe-uninitialized]
+  197 |    ? __check_break((NPC), (ACCESS), (ADDR), (ICNT), (CYCLE))  \
+      |      ^~~~~~~~~~~~~
+sim-outorder.c:3758:7: note: ‘is_write’ was declared here
+ 3758 |   int is_write;    /* store? */
+      |       ^~~~~~~~
+sim-outorder.c:3915:8: warning: ‘target_PC’ may be used uninitialized in this function [-Wmaybe-uninitialized]
+ 3914 |    || ((MD_OP_FLAGS(op) & (F_CTRL|F_DIRJMP)) == (F_CTRL|F_DIRJMP)
+      |        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 3915 |        && target_PC != pred_PC && br_pred_taken))
+      |        ^~~~~~~~~~~~~~~~~~~~~~~
+sim-outorder.c:3751:13: note: ‘target_PC’ was declared here
+ 3751 |   md_addr_t target_PC;   /* actual next/target PC address */
+      |             ^~~~~~~~~
+gcc -o sim-outorder `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-outorder.o cache.o bpred.o resource.o ptrace.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
+my work is done here...

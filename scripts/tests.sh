@@ -6,8 +6,11 @@ root_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/..
 configs=('cascade')
 
 for curr_config in ${configs[@]}; do
-    
-	
+
+    #debug    
+	cd ${root_dir}/specs/ammp/data/ref
+    ${root_dir}/sim-outorder ${root_dir}/tests/bin/test-fmath
+
 
     # ammp
     cd ${root_dir}/specs/ammp/data/ref

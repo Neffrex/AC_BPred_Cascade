@@ -633,13 +633,11 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 	    {
 	      dir_update_ptr->pdir1 = twolev;
 	      dir_update_ptr->pdir2 = bimod;
-        dir_update_ptr->pred_used = 1;
 	    }
 	  else
 	    {
 	      dir_update_ptr->pdir1 = bimod;
 	      dir_update_ptr->pdir2 = twolev;
-        dir_update_ptr->pred_used = 0;
 	    }
 	}
       break;
@@ -655,11 +653,13 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 	    {
 	      dir_update_ptr->pdir1 = twolev;
 	      dir_update_ptr->pdir2 = bimod;
+        dir_update_ptr->pred_used = 1;
 	    }
 	  else
 	    {
 	      dir_update_ptr->pdir1 = bimod;
 	      dir_update_ptr->pdir2 = twolev;
+        dir_update_ptr->pred_used = 0;
 	    }
 	}
       break;
@@ -986,23 +986,6 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 	{ /* not taken */
 	  if (*dir_update_ptr->pdir1 > 0)
 	    --*dir_update_ptr->pdir1;
-	}
-    }
-
-  /* combining predictor also updates second predictor and meta predictor */
-  /* second direction predictor */
-  if (dir_update_ptr->pdir2)
-    {
-      if (taken && *dir_update_ptr->pdir1 >=2)
-	{
-	  if (*dir_update_ptr->pdir2 < 3)
-	    ++*dir_update_ptr->pdir2;
-    
-	}
-      else if (*dir_update_ptr->pdir1 < 2)
-	{ /* not taken */
-	  if (*dir_update_ptr->pdir2 > 0)
-	    --*dir_update_ptr->pdir2;
 	}
     }
 

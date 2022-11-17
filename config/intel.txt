@@ -18,4 +18,4 @@
 -res:fpmult 2
 -fastfwd 100000000
 -max:inst 100000000 
-
+-bpred cascade
