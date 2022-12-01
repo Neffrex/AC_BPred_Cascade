@@ -3,7 +3,7 @@
 call_dir=$(pwd)
 root_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/..
 
-configs=('cascade')
+configs=('comb4' 'comb8' 'comb16' 'comb32' 'comb64')
 
 for curr_config in ${configs[@]}; do
 

@@ -1,58 +1,639 @@
-gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c main.c
-gcc -o sim-fast `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-fast.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
-gcc -o sim-safe `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-safe.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
-gcc -o sim-eio `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-eio.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
-gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c sim-bpred.c
-sim-bpred.c: In function ‘sim_main’:
-sim-bpred.c:495:15: warning: unused variable ‘temp_qword’ [-Wunused-variable]
-  495 |       qword_t temp_qword = 0;  /* " ditto " */
-      |               ^~~~~~~~~~
-sim-bpred.c:493:14: warning: unused variable ‘temp_word’ [-Wunused-variable]
-  493 |       word_t temp_word = 0;  /* " ditto " */
-      |              ^~~~~~~~~
-sim-bpred.c:492:14: warning: unused variable ‘temp_half’ [-Wunused-variable]
-  492 |       half_t temp_half = 0;  /* " ditto " */
-      |              ^~~~~~~~~
-sim-bpred.c:491:14: warning: unused variable ‘temp_byte’ [-Wunused-variable]
-  491 |       byte_t temp_byte = 0;  /* temp variable for spec mem access */
-      |              ^~~~~~~~~
-sim-bpred.c:488:17: warning: variable ‘target_PC’ set but not used [-Wunused-but-set-variable]
-  488 |       md_addr_t target_PC;  /* actual next/target PC address */
-      |                 ^~~~~~~~~
-gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c bpred.c
-gcc -o sim-bpred `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-bpred.o bpred.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
-gcc -o sim-profile `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-profile.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
-gcc -o sim-cache `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-cache.o cache.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
-gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c sim-outorder.c
-sim-outorder.c: In function ‘ruu_dispatch’:
-sim-outorder.c:3760:7: warning: variable ‘br_taken’ set but not used [-Wunused-but-set-variable]
- 3760 |   int br_taken, br_pred_taken;  /* if br, taken?  predicted taken? */
-      |       ^~~~~~~~
-sim-outorder.c: In function ‘sim_main’:
-sim-outorder.c:4494:17: warning: variable ‘target_PC’ set but not used [-Wunused-but-set-variable]
- 4494 |       md_addr_t target_PC;  /* actual next/target PC address */
-      |                 ^~~~~~~~~
-In file included from sim-outorder.c:73:
-dlite.h:197:6: warning: ‘addr’ may be used uninitialized in this function [-Wmaybe-uninitialized]
-  197 |    ? __check_break((NPC), (ACCESS), (ADDR), (ICNT), (CYCLE))  \
-      |      ^~~~~~~~~~~~~
-sim-outorder.c:3752:13: note: ‘addr’ was declared here
- 3752 |   md_addr_t addr;   /* effective address, if load/store */
-      |             ^~~~
-In file included from sim-outorder.c:73:
-dlite.h:197:6: warning: ‘is_write’ may be used uninitialized in this function [-Wmaybe-uninitialized]
-  197 |    ? __check_break((NPC), (ACCESS), (ADDR), (ICNT), (CYCLE))  \
-      |      ^~~~~~~~~~~~~
-sim-outorder.c:3758:7: note: ‘is_write’ was declared here
- 3758 |   int is_write;    /* store? */
-      |       ^~~~~~~~
-sim-outorder.c:3915:8: warning: ‘target_PC’ may be used uninitialized in this function [-Wmaybe-uninitialized]
- 3914 |    || ((MD_OP_FLAGS(op) & (F_CTRL|F_DIRJMP)) == (F_CTRL|F_DIRJMP)
-      |        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- 3915 |        && target_PC != pred_PC && br_pred_taken))
-      |        ^~~~~~~~~~~~~~~~~~~~~~~
-sim-outorder.c:3751:13: note: ‘target_PC’ was declared here
- 3751 |   md_addr_t target_PC;   /* actual next/target PC address */
-      |             ^~~~~~~~~
-gcc -o sim-outorder `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-outorder.o cache.o bpred.o resource.o ptrace.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
-my work is done here...
+diff --git a/bpred.c b/bpred.c
+index 458ff42..6df9fc1 100644
+--- a/bpred.c
++++ b/bpred.c
+@@ -98,6 +98,17 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
+ 
+     break;
+ 
++  case BPredCascade:
++    /* bimodal component */
++    pred->dirpred.bimod =
++      bpred_dir_create(BPred2bit, bimod_size, 0, 0, 0);
++    
++    /* 2-level component */
++    pred->dirpred.twolev = 
++      bpred_dir_create(BPred2Level, l1size, l2size, shift_width, xor);
++    
++    break;
++
+   case BPred2Level:
+     pred->dirpred.twolev = 
+       bpred_dir_create(class, l1size, l2size, shift_width, xor);
+@@ -120,6 +131,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
+   /* allocate ret-addr stack */
+   switch (class) {
+   case BPredComb:
++  case BPredCascade:
+   case BPred2Level:
+   case BPred2bit:
+     {
+@@ -187,7 +199,6 @@ bpred_dir_create (
+ {
+   struct bpred_dir_t *pred_dir;
+   unsigned int cnt;
+-  int flipflop;
+ 
+   if (!(pred_dir = calloc(1, sizeof(struct bpred_dir_t))))
+     fatal("out of virtual memory");
+@@ -223,11 +234,9 @@ bpred_dir_create (
+ 	fatal("cannot allocate second level table");
+ 
+       /* initialize counters to weakly this-or-that */
+-      flipflop = 1;
+       for (cnt = 0; cnt < l2size; cnt++)
+ 	{
+-	  pred_dir->config.two.l2table[cnt] = flipflop;
+-	  flipflop = 3 - flipflop;
++	  pred_dir->config.two.l2table[cnt] = 4;
+ 	}
+ 
+       break;
+@@ -242,12 +251,10 @@ bpred_dir_create (
+ 	  calloc(l1size, sizeof(unsigned char))))
+       fatal("cannot allocate 2bit storage");
+     /* initialize counters to weakly this-or-that */
+-    flipflop = 1;
+     for (cnt = 0; cnt < l1size; cnt++)
+       {
+-	pred_dir->config.bimod.table[cnt] = flipflop;
+-	flipflop = 3 - flipflop;
+-      }
++	pred_dir->config.bimod.table[cnt] = 3;
++        }
+ 
+     break;
+ 
+@@ -271,6 +278,7 @@ bpred_dir_config(
+   FILE *stream)			/* output stream */
+ {
+   switch (pred_dir->class) {
++  case BPredCascade:
+   case BPred2Level:
+     fprintf(stream,
+       "pred_dir: %s: 2-lvl: %d l1-sz, %d bits/ent, %s xor, %d l2-sz, direct-mapped\n",
+@@ -311,6 +319,14 @@ bpred_config(struct bpred_t *pred,	/* branch predictor instance */
+     fprintf(stream, "ret_stack: %d entries", pred->retstack.size);
+     break;
+ 
++  case BPredCascade:
++    bpred_dir_config (pred->dirpred.bimod, "bimod", stream);
++    bpred_dir_config (pred->dirpred.twolev, "2lev", stream);
++    fprintf(stream, "btb: %d sets x %d associativity", 
++	    pred->btb.sets, pred->btb.assoc);
++    fprintf(stream, "ret_stack: %d entries", pred->retstack.size);
++    break;
++
+   case BPred2Level:
+     bpred_dir_config (pred->dirpred.twolev, "2lev", stream);
+     fprintf(stream, "btb: %d sets x %d associativity", 
+@@ -361,6 +377,9 @@ bpred_reg_stats(struct bpred_t *pred,	/* branch predictor instance */
+     case BPredComb:
+       name = "bpred_comb";
+       break;
++    case BPredCascade:
++      name = "bpred_cascade";
++      break;
+     case BPred2Level:
+       name = "bpred_2lev";
+       break;
+@@ -488,50 +507,71 @@ bpred_after_priming(struct bpred_t *bpred)
+     /* was: ((baddr >> 16) ^ baddr) & (pred->dirpred.bimod.size-1) */
+ 
+ /* predicts a branch direction */
+-char *						/* pointer to counter */
+-bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
+-		 md_addr_t baddr)		/* branch address */
+-{
+-  unsigned char *p = NULL;
+-
+-  /* Except for jumps, get a pointer to direction-prediction bits */
+-  switch (pred_dir->class) {
+-    case BPred2Level:
+-      {
+-	int l1index, l2index;
+-
+-        /* traverse 2-level tables */
+-        l1index = (baddr >> MD_BR_SHIFT) & (pred_dir->config.two.l1size - 1);
+-        l2index = pred_dir->config.two.shiftregs[l1index];
+-        if (pred_dir->config.two.xor)
+-	  {
+-#if 1
+-	    /* this L2 index computation is more "compatible" to McFarling's
+-	       verison of it, i.e., if the PC xor address component is only
+-	       part of the index, take the lower order address bits for the
+-	       other part of the index, rather than the higher order ones */
+-	    l2index = (((l2index ^ (baddr >> MD_BR_SHIFT))
+-			& ((1 << pred_dir->config.two.shift_width) - 1))
+-		       | ((baddr >> MD_BR_SHIFT)
+-			  << pred_dir->config.two.shift_width));
+-#else
+-	    l2index = l2index ^ (baddr >> MD_BR_SHIFT);
+-#endif
+-	  }
+-	else
+-	  {
+-	    l2index =
+-	      l2index
+-		| ((baddr >> MD_BR_SHIFT) << pred_dir->config.two.shift_width);
+-	  }
+-        l2index = l2index & (pred_dir->config.two.l2size - 1);
++char * /* pointer to counter */
++  bpred_dir_lookup(struct bpred_dir_t * pred_dir, /* branch dir predictor inst */
++    md_addr_t baddr) /* branch address */ {
++    unsigned char * p = NULL;
++
++    /* Except for jumps, get a pointer to direction-prediction bits */
++    switch (pred_dir -> class) {
++    case BPred2Level: {
++      int l1index, l2index;
++
++      /* traverse 2-level tables */
++      l1index = (baddr >> MD_BR_SHIFT) & (pred_dir -> config.two.l1size - 1);
++      l2index = pred_dir -> config.two.shiftregs[l1index];
++      if (pred_dir -> config.two.xor) {
++        #if 1
++        /* this L2 index computation is more "compatible" to McFarling's
++           verison of it, i.e., if the PC xor address component is only
++           part of the index, take the lower order address bits for the
++           other part of the index, rather than the higher order ones */
++        l2index = (((l2index ^ (baddr >> MD_BR_SHIFT)) &
++            ((1 << pred_dir -> config.two.shift_width) - 1)) |
++          ((baddr >> MD_BR_SHIFT) <<
++            pred_dir -> config.two.shift_width));
++        #else
++        l2index = l2index ^ (baddr >> MD_BR_SHIFT);
++        #endif
++      } else {
++        l2index = l2index | ((baddr >> MD_BR_SHIFT) << pred_dir -> config.two.shift_width);
++      }
++      l2index = l2index & (pred_dir -> config.two.l2size - 1);
+ 
+-        /* get a pointer to prediction state information */
+-        p = &pred_dir->config.two.l2table[l2index];
++      /* get a pointer to prediction state information */
++      p = & pred_dir -> config.two.l2table[l2index];
++    }
++    break;
++    case BPredCascade: {
++      int l1index, l2index;
++
++      /* traverse 2-level tables */
++      l1index = (baddr >> MD_BR_SHIFT) & (pred_dir -> config.two.l1size - 1);
++      l2index = pred_dir -> config.two.shiftregs[l1index];
++      if (pred_dir -> config.two.xor) {
++        #if 1
++        /* this L2 index computation is more "compatible" to McFarling's
++           verison of it, i.e., if the PC xor address component is only
++           part of the index, take the lower order address bits for the
++           other part of the index, rather than the higher order ones */
++        l2index = (((l2index ^ (baddr >> MD_BR_SHIFT)) &
++            ((1 << pred_dir -> config.two.shift_width) - 1)) |
++          ((baddr >> MD_BR_SHIFT) <<
++            pred_dir -> config.two.shift_width));
++        #else
++        l2index = l2index ^ (baddr >> MD_BR_SHIFT);
++        #endif
++      } else {
++        l2index = l2index | ((baddr >> MD_BR_SHIFT) << pred_dir -> config.two.shift_width);
+       }
+-      break;
++      l2index = l2index & (pred_dir -> config.two.l2size - 1);
++
++      /* get a pointer to prediction state information */
++      p = & pred_dir -> config.two.l2table[l2index];
++    }
++    break;
+     case BPred2bit:
+-      p = &pred_dir->config.bimod.table[BIMOD_HASH(pred_dir, baddr)];
++      p = & pred_dir -> config.bimod.table[BIMOD_HASH(pred_dir, baddr)];
+       break;
+     case BPredTaken:
+     case BPredNotTaken:
+@@ -540,8 +580,8 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
+       panic("bogus branch direction predictor class");
+     }
+ 
+-  return (char *)p;
+-}
++    return (char * ) p;
++  }
+ 
+ /* probe a predictor for a next fetch address, the predictor is probed
+    with branch address BADDR, the branch target is BTARGET (used for
+@@ -585,11 +625,10 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
+ 	  char *bimod, *twolev, *meta;
+ 	  bimod = bpred_dir_lookup (pred->dirpred.bimod, baddr);
+ 	  twolev = bpred_dir_lookup (pred->dirpred.twolev, baddr);
+-	  meta = bpred_dir_lookup (pred->dirpred.meta, baddr);
+-	  dir_update_ptr->pmeta = meta;
+-	  dir_update_ptr->dir.meta  = (*meta >= 2);
++    meta = bpred_dir_lookup (pred->dirpred.meta, baddr);
+ 	  dir_update_ptr->dir.bimod = (*bimod >= 2);
+ 	  dir_update_ptr->dir.twolev  = (*twolev >= 2);
++    dir_update_ptr->dir.meta = (*meta >= 2);
+ 	  if (*meta >= 2)
+ 	    {
+ 	      dir_update_ptr->pdir1 = twolev;
+@@ -602,6 +641,28 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
+ 	    }
+ 	}
+       break;
++    case BPredCascade:
++      if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
++	{
++	  char *bimod, *twolev;
++	  bimod = bpred_dir_lookup (pred->dirpred.bimod, baddr);
++	  twolev = bpred_dir_lookup (pred->dirpred.twolev, baddr);
++	  dir_update_ptr->dir.bimod = (*bimod >= 2);
++	  dir_update_ptr->dir.twolev  = (*twolev >= 2);
++	  if (*twolev != 4)
++	    {
++	      dir_update_ptr->pdir1 = twolev;
++	      dir_update_ptr->pdir2 = bimod;
++        dir_update_ptr->pred_used = 1;
++	    }
++	  else
++	    {
++	      dir_update_ptr->pdir1 = bimod;
++	      dir_update_ptr->pdir2 = twolev;
++        dir_update_ptr->pred_used = 0;
++	    }
++	}
++      break;
+     case BPred2Level:
+       if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
+ 	{
+@@ -777,7 +838,8 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
+     }
+   else if ((MD_OP_FLAGS(op) & (F_CTRL|F_COND)) == (F_CTRL|F_COND))
+     {
+-      if (dir_update_ptr->dir.meta)
++      
++      if (dir_update_ptr->pred_used)
+ 	pred->used_2lev++;
+       else
+ 	pred->used_bimod++;
+@@ -827,7 +889,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
+   /* update L1 table if appropriate */
+   /* L1 table is updated unconditionally for combining predictor too */
+   if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND) &&
+-      (pred->class == BPred2Level || pred->class == BPredComb))
++      (pred->class == BPred2Level || pred->class == BPredComb || pred->class == BPredCascade))
+     {
+       int l1index, shift_reg;
+       
+@@ -904,7 +966,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
+       else
+ 	pbtb = &pred->btb.btb_data[index];
+     }
+-      
++    
+   /* 
+    * Now 'p' is a possibly null pointer into the direction prediction table, 
+    * and 'pbtb' is a possibly null pointer into the BTB (either to a 
+@@ -918,6 +980,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
+ 	{
+ 	  if (*dir_update_ptr->pdir1 < 3)
+ 	    ++*dir_update_ptr->pdir1;
++
+ 	}
+       else
+ 	{ /* not taken */
+@@ -926,43 +989,6 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
+ 	}
+     }
+ 
+-  /* combining predictor also updates second predictor and meta predictor */
+-  /* second direction predictor */
+-  if (dir_update_ptr->pdir2)
+-    {
+-      if (taken)
+-	{
+-	  if (*dir_update_ptr->pdir2 < 3)
+-	    ++*dir_update_ptr->pdir2;
+-	}
+-      else
+-	{ /* not taken */
+-	  if (*dir_update_ptr->pdir2 > 0)
+-	    --*dir_update_ptr->pdir2;
+-	}
+-    }
+-
+-  /* meta predictor */
+-  if (dir_update_ptr->pmeta)
+-    {
+-      if (dir_update_ptr->dir.bimod != dir_update_ptr->dir.twolev)
+-	{
+-	  /* we only update meta predictor if directions were different */
+-	  if (dir_update_ptr->dir.twolev == (unsigned int)taken)
+-	    {
+-	      /* 2-level predictor was correct */
+-	      if (*dir_update_ptr->pmeta < 3)
+-		++*dir_update_ptr->pmeta;
+-	    }
+-	  else
+-	    {
+-	      /* bimodal predictor was correct */
+-	      if (*dir_update_ptr->pmeta > 0)
+-		--*dir_update_ptr->pmeta;
+-	    }
+-	}
+-    }
+-
+   /* update BTB (but only for taken branches) */
+   if (pbtb)
+     {
+diff --git a/bpred.h b/bpred.h
+index 0d5e48e..f47db7a 100644
+--- a/bpred.h
++++ b/bpred.h
+@@ -104,6 +104,7 @@ enum bpred_class {
+   BPred2bit,			/* 2-bit saturating cntr pred (dir mapped) */
+   BPredTaken,			/* static predict taken */
+   BPredNotTaken,		/* static predict not taken */
++  BPredCascade,   /* New Predictor with Gshare and Bimod in hybrid mode */
+   BPred_NUM
+ };
+ 
+@@ -178,6 +179,7 @@ struct bpred_update_t {
+   char *pdir1;		/* direction-1 predictor counter */
+   char *pdir2;		/* direction-2 predictor counter */
+   char *pmeta;		/* meta predictor counter */
++  char pred_used; /* predictor used */
+   struct {		/* predicted directions */
+     unsigned int ras    : 1;	/* RAS used */
+     unsigned int bimod  : 1;    /* bimodal predictor */
+diff --git a/bpred.o b/bpred.o
+index 5c97db3..e4a641c 100644
+Binary files a/bpred.o and b/bpred.o differ
+diff --git a/config/cascade.txt b/config/cascade.txt
+new file mode 100644
+index 0000000..a23ee9d
+--- /dev/null
++++ b/config/cascade.txt
+@@ -0,0 +1,3 @@
++-bpred cascade
++-bpred:bimod 64
++-bpred:2lev 1 2048 11 1
+diff --git a/config/intel.txt b/config/intel.txt
+index f268195..30789f0 100644
+--- a/config/intel.txt
++++ b/config/intel.txt
+@@ -18,4 +18,4 @@
+ -res:fpmult 2
+ -fastfwd 100000000
+ -max:inst 100000000 
+-
++-bpred cascade
+diff --git a/gmon.out b/gmon.out
+new file mode 100644
+index 0000000..365321e
+Binary files /dev/null and b/gmon.out differ
+diff --git a/log.txt b/log.txt
+new file mode 100644
+index 0000000..fca75cf
+--- /dev/null
++++ b/log.txt
+@@ -0,0 +1,58 @@
++gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c main.c
++gcc -o sim-fast `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-fast.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
++gcc -o sim-safe `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-safe.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
++gcc -o sim-eio `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-eio.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
++gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c sim-bpred.c
++sim-bpred.c: In function ‘sim_main’:
++sim-bpred.c:495:15: warning: unused variable ‘temp_qword’ [-Wunused-variable]
++  495 |       qword_t temp_qword = 0;  /* " ditto " */
++      |               ^~~~~~~~~~
++sim-bpred.c:493:14: warning: unused variable ‘temp_word’ [-Wunused-variable]
++  493 |       word_t temp_word = 0;  /* " ditto " */
++      |              ^~~~~~~~~
++sim-bpred.c:492:14: warning: unused variable ‘temp_half’ [-Wunused-variable]
++  492 |       half_t temp_half = 0;  /* " ditto " */
++      |              ^~~~~~~~~
++sim-bpred.c:491:14: warning: unused variable ‘temp_byte’ [-Wunused-variable]
++  491 |       byte_t temp_byte = 0;  /* temp variable for spec mem access */
++      |              ^~~~~~~~~
++sim-bpred.c:488:17: warning: variable ‘target_PC’ set but not used [-Wunused-but-set-variable]
++  488 |       md_addr_t target_PC;  /* actual next/target PC address */
++      |                 ^~~~~~~~~
++gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c bpred.c
++gcc -o sim-bpred `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-bpred.o bpred.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
++gcc -o sim-profile `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-profile.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
++gcc -o sim-cache `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-cache.o cache.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
++gcc `./sysprobe -flags` -DDEBUG -O -g -Wall   -c sim-outorder.c
++sim-outorder.c: In function ‘ruu_dispatch’:
++sim-outorder.c:3760:7: warning: variable ‘br_taken’ set but not used [-Wunused-but-set-variable]
++ 3760 |   int br_taken, br_pred_taken;  /* if br, taken?  predicted taken? */
++      |       ^~~~~~~~
++sim-outorder.c: In function ‘sim_main’:
++sim-outorder.c:4494:17: warning: variable ‘target_PC’ set but not used [-Wunused-but-set-variable]
++ 4494 |       md_addr_t target_PC;  /* actual next/target PC address */
++      |                 ^~~~~~~~~
++In file included from sim-outorder.c:73:
++dlite.h:197:6: warning: ‘addr’ may be used uninitialized in this function [-Wmaybe-uninitialized]
++  197 |    ? __check_break((NPC), (ACCESS), (ADDR), (ICNT), (CYCLE))  \
++      |      ^~~~~~~~~~~~~
++sim-outorder.c:3752:13: note: ‘addr’ was declared here
++ 3752 |   md_addr_t addr;   /* effective address, if load/store */
++      |             ^~~~
++In file included from sim-outorder.c:73:
++dlite.h:197:6: warning: ‘is_write’ may be used uninitialized in this function [-Wmaybe-uninitialized]
++  197 |    ? __check_break((NPC), (ACCESS), (ADDR), (ICNT), (CYCLE))  \
++      |      ^~~~~~~~~~~~~
++sim-outorder.c:3758:7: note: ‘is_write’ was declared here
++ 3758 |   int is_write;    /* store? */
++      |       ^~~~~~~~
++sim-outorder.c:3915:8: warning: ‘target_PC’ may be used uninitialized in this function [-Wmaybe-uninitialized]
++ 3914 |    || ((MD_OP_FLAGS(op) & (F_CTRL|F_DIRJMP)) == (F_CTRL|F_DIRJMP)
++      |        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++ 3915 |        && target_PC != pred_PC && br_pred_taken))
++      |        ^~~~~~~~~~~~~~~~~~~~~~~
++sim-outorder.c:3751:13: note: ‘target_PC’ was declared here
++ 3751 |   md_addr_t target_PC;   /* actual next/target PC address */
++      |             ^~~~~~~~~
++gcc -o sim-outorder `./sysprobe -flags` -DDEBUG -O -g -Wall   sim-outorder.o cache.o bpred.o resource.o ptrace.o main.o syscall.o memory.o regs.o loader.o endian.o dlite.o symbol.o eval.o options.o stats.o eio.o range.o misc.o machine.o libexo/libexo.a `./sysprobe -libs` -lm
++my work is done here...
+diff --git a/log_make.txt b/log_make.txt
+new file mode 100644
+index 0000000..69c3f1c
+--- /dev/null
++++ b/log_make.txt
+@@ -0,0 +1,30 @@
++sim-outorder.c: In function ‘ruu_dispatch’:
++sim-outorder.c:3760:7: warning: variable ‘br_taken’ set but not used [-Wunused-but-set-variable]
++ 3760 |   int br_taken, br_pred_taken;  /* if br, taken?  predicted taken? */
++      |       ^~~~~~~~
++sim-outorder.c: In function ‘sim_main’:
++sim-outorder.c:4494:17: warning: variable ‘target_PC’ set but not used [-Wunused-but-set-variable]
++ 4494 |       md_addr_t target_PC;  /* actual next/target PC address */
++      |                 ^~~~~~~~~
++In file included from sim-outorder.c:73:
++dlite.h:197:6: warning: ‘addr’ may be used uninitialized in this function [-Wmaybe-uninitialized]
++  197 |    ? __check_break((NPC), (ACCESS), (ADDR), (ICNT), (CYCLE))  \
++      |      ^~~~~~~~~~~~~
++sim-outorder.c:3752:13: note: ‘addr’ was declared here
++ 3752 |   md_addr_t addr;   /* effective address, if load/store */
++      |             ^~~~
++In file included from sim-outorder.c:73:
++dlite.h:197:6: warning: ‘is_write’ may be used uninitialized in this function [-Wmaybe-uninitialized]
++  197 |    ? __check_break((NPC), (ACCESS), (ADDR), (ICNT), (CYCLE))  \
++      |      ^~~~~~~~~~~~~
++sim-outorder.c:3758:7: note: ‘is_write’ was declared here
++ 3758 |   int is_write;    /* store? */
++      |       ^~~~~~~~
++sim-outorder.c:3915:8: warning: ‘target_PC’ may be used uninitialized in this function [-Wmaybe-uninitialized]
++ 3914 |    || ((MD_OP_FLAGS(op) & (F_CTRL|F_DIRJMP)) == (F_CTRL|F_DIRJMP)
++      |        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++ 3915 |        && target_PC != pred_PC && br_pred_taken))
++      |        ^~~~~~~~~~~~~~~~~~~~~~~
++sim-outorder.c:3751:13: note: ‘target_PC’ was declared here
++ 3751 |   md_addr_t target_PC;   /* actual next/target PC address */
++      |             ^~~~~~~~~
+diff --git a/scripts/tests.sh b/scripts/tests.sh
+index 8940aad..d292a2e 100755
+--- a/scripts/tests.sh
++++ b/scripts/tests.sh
+@@ -3,31 +3,36 @@
+ call_dir=$(pwd)
+ root_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/..
+ 
+-configs=('intel2' 'amd2')
++configs=('cascade')
+ 
+ for curr_config in ${configs[@]}; do
+-    
++
++    #debug    
++	cd ${root_dir}/specs/ammp/data/ref
++    ${root_dir}/sim-outorder ${root_dir}/tests/bin/test-fmath
++
++
+     # ammp
+     cd ${root_dir}/specs/ammp/data/ref
+-    ${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/ammp/exe/ammp.exe <${root_dir}/specs/ammp/data/ref/ammp.in 2>${root_dir}/stats/${curr_config}_ammp &
++    ${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/ammp/exe/ammp.exe <${root_dir}/specs/ammp/data/ref/ammp.in 2>${root_dir}/stats/${curr_config}_ammp
+     
+     # eon
+-    cd ${root_dir}/specs/eon/data/ref
+-    ${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/eon/exe/eon.exe chair.control.cook chair.camera chair.surfaces chair.cook.ppm ppm pixels_out.cook 2>${root_dir}/stats/${curr_config}_eon &
++    #cd ${root_dir}/specs/eon/data/ref
++    #${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/eon/exe/eon.exe chair.control.cook chair.camera chair.surfaces chair.cook.ppm ppm pixels_out.cook 2>${root_dir}/stats/${curr_config}_eon &
+     
+     #equake
+-    cd ${root_dir}/specs/equake/equake/data/ref
+-    ${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/equake/equake/exe/equake.exe <${root_dir}/specs/equake/equake/data/ref/inp.in 2>${root_dir}/stats/${curr_config}_equake &
++    #cd ${root_dir}/specs/equake/equake/data/ref
++    #${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/equake/equake/exe/equake.exe <${root_dir}/specs/equake/equake/data/ref/inp.in 2>${root_dir}/stats/${curr_config}_equake &
+ 
+     #gap
+-    cd ${root_dir}/specs/gap/gap/data/ref
+-    ${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/gap/gap/exe/gap.exe -l ${root_dir}/specs/gap/gap/data/all -q -m 192M <${root_dir}/specs/gap/gap/data/ref/ref.in 2>${root_dir}/stats/${curr_config}_gap &
++    #cd ${root_dir}/specs/gap/gap/data/ref
++    #${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/gap/gap/exe/gap.exe -l ${root_dir}/specs/gap/gap/data/all -q -m 192M <${root_dir}/specs/gap/gap/data/ref/ref.in 2>${root_dir}/stats/${curr_config}_gap &
+ 
+     #mesa
+-    cd ${root_dir}/specs/mesa/data/ref
+-    ${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/mesa/exe/mesa.exe -frames 10 -meshfile mesa.in -ppmfile mesa.ppm 2>${root_dir}/stats/${curr_config}_mesa &
++    #cd ${root_dir}/specs/mesa/data/ref
++    #${root_dir}/sim-outorder -config ${root_dir}/config/${curr_config}.txt ${root_dir}/specs/mesa/exe/mesa.exe -frames 10 -meshfile mesa.in -ppmfile mesa.ppm 2>${root_dir}/stats/${curr_config}_mesa &
+ 
+-    wait
++    #wait
+     echo 'Finished '${curr_config}
+ 
+ done
+diff --git a/sim-bpred b/sim-bpred
+index 2c8d5c5..a338c0c 100755
+Binary files a/sim-bpred and b/sim-bpred differ
+diff --git a/sim-bpred.o b/sim-bpred.o
+index 9a99403..e7b57d7 100644
+Binary files a/sim-bpred.o and b/sim-bpred.o differ
+diff --git a/sim-outorder b/sim-outorder
+index 4887d00..dcbd187 100755
+Binary files a/sim-outorder and b/sim-outorder differ
+diff --git a/sim-outorder.c b/sim-outorder.c
+index 7735fe0..95bc4b7 100644
+--- a/sim-outorder.c
++++ b/sim-outorder.c
+@@ -128,6 +128,10 @@ static int comb_nelt = 1;
+ static int comb_config[1] =
+   { /* meta_table_size */1024 };
+ 
++/* cascade predictor config*/
++static int cascade_nelt = 0;
++static int cascade_config[0] = {};
++
+ /* return address stack (RAS) size */
+ static int ras_size = 8;
+ 
+@@ -673,6 +677,12 @@ sim_reg_options(struct opt_odb_t *odb)
+ 		   /* default */comb_config,
+ 		   /* print */TRUE, /* format */NULL, /* !accrue */FALSE);
+ 
++  opt_reg_int_list(odb, "-bpred:cascade",
++       "cascade predictor config (<null>)",
++       cascade_config, cascade_nelt, &cascade_nelt,
++       /* default */cascade_config, 
++       /* print */TRUE, /* format */NULL, /* !accrue */FALSE);
++
+   opt_reg_int(odb, "-bpred:ras",
+               "return address stack size (0 for no return stack)",
+               &ras_size, /* default */ras_size,
+@@ -975,6 +985,29 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
+ 			  /* btb assoc */btb_config[1],
+ 			  /* ret-addr stack size */ras_size);
+     }
++  else if (!mystricmp(pred_type, "cascade"))
++    {
++        /* cascade predictor, bpred_create() checks args */
++        if (twolev_nelt != 4)
++    fatal("bad 2-level pred config (<l1size> <l2size> <hist_size> <xor>)");
++        if (bimod_nelt != 1)
++    fatal("bad bimod predictor config (<table_size>)");
++        if (cascade_nelt != 0)
++    fatal("bad cascade predictor config (<null>)");
++        if (btb_nelt != 2)
++    fatal("bad btb config (<num_sets> <associativity>)");
++       
++        pred = bpred_create(BPredCascade,
++			  /* bimod table size */bimod_config[0],
++			  /* l1 size */twolev_config[0],
++			  /* l2 size */twolev_config[1],
++			  /* meta table size */0,
++			  /* history reg size */twolev_config[2],
++			  /* history xor address */twolev_config[3],
++			  /* btb sets */btb_config[0],
++			  /* btb assoc */btb_config[1],
++			  /* ret-addr stack size */ras_size);
++    }
+   else
+     fatal("cannot parse predictor type `%s'", pred_type);
+ 
+diff --git a/sim-outorder.o b/sim-outorder.o
+index 2c1523d..3a06717 100644
+Binary files a/sim-outorder.o and b/sim-outorder.o differ
+diff --git a/stats/cascade_ammp b/stats/cascade_ammp
+new file mode 100644
+index 0000000..802a7d0
+--- /dev/null
++++ b/stats/cascade_ammp
+@@ -0,0 +1,18 @@
++orden indefinida: «read». Intente con «help»
++orden indefinida: «setf». Intente con «help»
++orden indefinida: «setf». Intente con «help»
++orden indefinida: «setf». Intente con «help»
++orden indefinida: «seti». Intente con «help»
++orden indefinida: «setf». Intente con «help»
++orden indefinida: «use». Intente con «help»
++orden indefinida: «use». Intente con «help»
++orden indefinida: «tpac». Intente con «help»
++Orden «monitor» no permitida en este objetivo.
++Orden «monitor» no permitida en este objetivo.
++orden indefinida: «tpac». Intente con «help»
++Orden «monitor» no permitida en este objetivo.
++Orden «monitor» no permitida en este objetivo.
++orden indefinida: «tpac». Intente con «help»
++Orden «monitor» no permitida en este objetivo.
++Orden «monitor» no permitida en este objetivo.
++orden indefinida: «exit». Intente con «help»

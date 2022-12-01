@@ -1,0 +1,3 @@
+-bpred cascade
+-bpred:bimod 4
+-bpred:2lev 1 8 3 1

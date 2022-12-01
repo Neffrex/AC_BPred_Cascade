@@ -278,7 +278,6 @@ bpred_dir_config(
   FILE *stream)			/* output stream */
 {
   switch (pred_dir->class) {
-  case BPredCascade:
   case BPred2Level:
     fprintf(stream,
       "pred_dir: %s: 2-lvl: %d l1-sz, %d bits/ent, %s xor, %d l2-sz, direct-mapped\n",
@@ -988,6 +987,14 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 	    --*dir_update_ptr->pdir1;
 	}
     }
+
+  if (!dir_update_ptr->pred_used //bimod used
+     && (!(!!pred_taken && !!taken)))//bimod didn't hit
+  {  
+    // initialize g-share
+    dir_update_ptr->pdir2 = taken*2; //10 if taken, 00 if no taken
+  }
+
 
   /* update BTB (but only for taken branches) */
   if (pbtb)

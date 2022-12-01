@@ -179,7 +179,7 @@ struct bpred_update_t {
   char *pdir1;		/* direction-1 predictor counter */
   char *pdir2;		/* direction-2 predictor counter */
   char *pmeta;		/* meta predictor counter */
-  char pred_used; /* predictor used */
+  char pred_used; /* predictor used 0=bimod 1=g-share*/
   struct {		/* predicted directions */
     unsigned int ras    : 1;	/* RAS used */
     unsigned int bimod  : 1;    /* bimodal predictor */

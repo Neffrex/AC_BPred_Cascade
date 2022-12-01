@@ -1,0 +1,4 @@
+-bpred comb
+-bpred:comb 2048
+-bpred:bimod 64
+-bpred:2lev 1 2048 11 1
